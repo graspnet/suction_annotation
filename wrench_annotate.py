@@ -1,21 +1,28 @@
 import os
 import numpy as np
-import open3d as o3d
-from transforms3d.euler import euler2mat, quat2mat
+import argparse
+from transforms3d.euler import euler2mat
 from utils.xmlhandler import xmlReader
-from PIL import Image
-from multiprocessing import Process
-import scipy.io as scio
-from utils.rotation import viewpoint_params_to_matrix, viewpoint_to_matrix
+from utils.rotation import viewpoint_to_matrix
 import csv
 
 
-DATASET_ROOT = '/DATA2/Benchmark/graspnet'
-labeldir = '/DATA1/hanwen/grasping/annotation_v4_10w/radius_1cm/poisson'
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset_root', default='', help='Directory of graspnet dataset')
+parser.add_argument('--label_dir', default='', help='Directory of seal annotation label')
+parser.add_argument('--save_dir', default='', help='Directory to save wrench annotation')
+parser.add_argument('--camera', default='kinect', help='camera to use [default: kinect]')
+args = parser.parse_args()
+
+
+DATASET_ROOT = args.dataset_root
+labeldir = args.label_dir
 modeldir = os.path.join(DATASET_ROOT, 'models')
-# scenedir = os.path.join(DATASET_ROOT, 'scenes') + '/scene_{}/{}'
 LOG = open('log_wrench.txt', 'w')
-save_dir = '/DATA1/hanwen/grasping/wrench_scoreV2'
+save_dir = args.save_dir
+camera = args.camera
+anno_idx = 0 # this doesn't matter since we annotate in 3D so the global pose are the same for all views (anno_idxs)
+
 
 k = 15.6
 radius = 0.01
@@ -56,8 +63,7 @@ def parse_posevector(posevector):
     return obj_idx, mat
 
 
-def wrench_annotate(dataset_root, scene_idx, anno_idx, weight_dict, save_dir,
-                            return_poses=False, align=False, camera='realsense'):
+def wrench_annotate(dataset_root, scene_idx, anno_idx, save_dir, align=False, camera='realsense'):
 
     scene_name = 'scene_%04d' % scene_idx
 
@@ -72,8 +78,6 @@ def wrench_annotate(dataset_root, scene_idx, anno_idx, weight_dict, save_dir,
     posevectors = scene_reader.getposevectorlist()
     obj_list = []
     mat_list = []
-    # model_list = []
-    # pose_list = []
     
     for posevector in posevectors:
         obj_idx, pose = parse_posevector(posevector)
@@ -92,11 +96,6 @@ def wrench_annotate(dataset_root, scene_idx, anno_idx, weight_dict, save_dir,
         
         center = points.mean(axis=0)
 
-        weight = weight_dict[obj_idx]
-        if weight is None:
-            log_string('None Weight! in scene {} of object {}'.format(scene_idx, obj_idx))
-            break
-        
         gravity = np.array([[0, 0, -1]], dtype=np.float32) * g
 
         single_scores = []
@@ -106,18 +105,11 @@ def wrench_annotate(dataset_root, scene_idx, anno_idx, weight_dict, save_dir,
             coord = np.matmul(suction2center, suction_axis)
 
             gravity_proj = np.matmul(gravity, suction_axis)
-            
-            # print('gravity:', gravity_proj.shape)
-            # print('coord:', coord.shape)
 
             torque_y = gravity_proj[0, 0] * coord[0, 2] - gravity_proj[0, 2] * coord[0, 0]
             torque_x = -gravity_proj[0, 1] * coord[0, 2] + gravity_proj[0, 2] * coord[0, 1]
-
             torque = np.sqrt(torque_x**2 + torque_y**2)
 
-            # dist = np.linalg.norm(suction2center)
-            # score = 1 / (1 + np.exp(-wrench_thre/torque_max + 1))
-            # score = 1 / (1 + np.exp((torque_max - wrench_thre)*100))
             score = 1 - min(1, torque / wrench_thre)
 
             single_scores.append(score)
@@ -130,30 +122,10 @@ def wrench_annotate(dataset_root, scene_idx, anno_idx, weight_dict, save_dir,
 
 
 if __name__ == "__main__":
-    
-    csvFile = open("weights.csv", "r", encoding="utf-8-sig")
-    reader = csv.reader(csvFile)
-    
-    obj_dict = {}
-    for id, item in enumerate(reader):
-        # print(id, item)
-        if item[0] != '':
-            obj_dict[id] = float(item[0])
-        elif item[1] != '':
-            obj_dict[id] = float(item[1])
-        else:
-            obj_dict[id] = None
-    
-    anno_idx = 0
-    camera = 'kinect'
-    # camera = 'realsense'
 
     for scene_idx in range(190):
-        # scene_idx = 30
-        
-        
         if not os.path.exists(save_dir):
             os.makedirs(save_dir, exist_ok=True)
 
-        wrench_annotate(DATASET_ROOT, scene_idx, anno_idx, obj_dict, save_dir, return_poses=True, align=True, camera=camera)
+        wrench_annotate(DATASET_ROOT, scene_idx, anno_idx, save_dir, align=True, camera=camera)
 
