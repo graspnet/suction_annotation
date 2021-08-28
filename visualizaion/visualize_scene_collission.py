@@ -196,7 +196,7 @@ def vis_collision_individual(scene_idx, anno_idx, camera, visu_num):
         print('Checking ' + str(obj_i+1) + ' / ' + str(num_obj))
         obj_idx = obj_list[obj_i]
         trans = pose_list[obj_i]
-        sampled_points, normals, scores, _ = get_model_grasps('%s/%03d_labels.npz'%(labeldir, obj_idx))
+        sampled_points, normals, scores, _ = get_model_grasps('%s/%03d_labels.npz'%(sealdir, obj_idx))
         collision = collision_dump['arr_{}'.format(obj_i)]
 
         point_inds = np.random.choice(sampled_points.shape[0], visu_num)
@@ -238,7 +238,7 @@ def vis_collision_all(scene_idx, anno_idx, camera, visu_num):
         print('Checking ' + str(obj_i+1) + ' / ' + str(num_obj))
         obj_idx = obj_list[obj_i]
         trans = pose_list[obj_i]
-        sampled_points, normals, scores, _ = get_model_grasps('%s/%03d_labels.npz'%(labeldir, obj_idx))
+        sampled_points, normals, scores, _ = get_model_grasps('%s/%03d_labels.npz'%(sealdir, obj_idx))
         collision = collision_dump['arr_{}'.format(obj_i)]
 
         point_inds = np.random.choice(sampled_points.shape[0], visu_num)
@@ -262,7 +262,7 @@ def vis_collision_all(scene_idx, anno_idx, camera, visu_num):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset_root', default='', help='Directory of graspnet dataset')
-parser.add_argument('--label_dir', default='', help='Directory of seal annotation label')
+parser.add_argument('--seal_dir', default='', help='Directory of seal annotation label')
 parser.add_argument('--colli_dir', default='', help='Directory of the collision annotation results')
 parser.add_argument('--camera', default='kinect', help='camera to use [default: kinect]')
 parser.add_argument("--scene_idx", type=int, default=0, help='the index of scene to visualize [default: 0]')
@@ -273,7 +273,7 @@ args = parser.parse_args()
 
 
 DATASET_ROOT = args.dataset_root
-labeldir = args.label_dir
+sealdir = args.seal_dir
 modeldir = os.path.join(DATASET_ROOT, 'models')
 collisiondir = args.colli_dir
 scene_idx = args.scene_idx
