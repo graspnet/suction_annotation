@@ -4,7 +4,6 @@ import argparse
 from transforms3d.euler import euler2mat
 from utils.xmlhandler import xmlReader
 from utils.rotation import viewpoint_to_matrix
-import csv
 
 
 parser = argparse.ArgumentParser()
