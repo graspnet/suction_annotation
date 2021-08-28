@@ -129,7 +129,7 @@ def scene_collision_detection(scene_idx, anno_idx, save_dir, sample_size=0.005, 
     for i, (obj_idx, trans) in enumerate(zip(obj_list, pose_list)):
         # print(obj_idx)
         log_string('Obj-' + str(obj_idx))
-        points, normals, _, collision = get_model_grasps('%s/%03d_labels.npz'%(labeldir, obj_idx))
+        points, normals, _, collision = get_model_grasps('%s/%03d_labels.npz'%(sealdir, obj_idx))
         # collision = np.array(points.shape[0]).astype(np.bool)
         
         # crop scene
@@ -177,7 +177,7 @@ def scene_collision_detection(scene_idx, anno_idx, save_dir, sample_size=0.005, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset_root', default='', help='Directory of graspnet dataset')
-parser.add_argument('--label_dir', default='', help='Directory of seal annotation label')
+parser.add_argument('--seal_dir', default='', help='Directory of seal annotation label')
 parser.add_argument('--save_dir', default='', help='Directory to save the annotation results')
 parser.add_argument('--camera', default='kinect', help='camera to use [default: kinect]')
 parser.add_argument("--pool_size", type=int, default=30)
@@ -185,7 +185,7 @@ args = parser.parse_args()
 
 
 DATASET_ROOT = args.dataset_root
-labeldir = args.label_dir
+sealdir = args.seal_dir
 save_dir = args.save_dir
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
