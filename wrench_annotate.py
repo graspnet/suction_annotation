@@ -8,14 +8,14 @@ from utils.rotation import viewpoint_to_matrix
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset_root', default='', help='Directory of graspnet dataset')
-parser.add_argument('--label_dir', default='', help='Directory of seal annotation label')
+parser.add_argument('--seal_dir', default='', help='Directory of seal annotation label')
 parser.add_argument('--save_dir', default='', help='Directory to save wrench annotation')
 parser.add_argument('--camera', default='kinect', help='camera to use [default: kinect]')
 args = parser.parse_args()
 
 
 DATASET_ROOT = args.dataset_root
-labeldir = args.label_dir
+sealdir = args.seal_dir
 modeldir = os.path.join(DATASET_ROOT, 'models')
 LOG = open('log_wrench.txt', 'w')
 save_dir = args.save_dir
@@ -88,7 +88,7 @@ def wrench_annotate(dataset_root, scene_idx, anno_idx, save_dir, align=False, ca
     wrench_scores = []
     for obj_idx, pose in zip(obj_list, mat_list):
         print('object id:', obj_idx)
-        points, normals, _, _ = get_model_grasps('%s/%03d_labels.npz'%(labeldir, obj_idx))
+        points, normals, _, _ = get_model_grasps('%s/%03d_labels.npz'%(sealdir, obj_idx))
         if align:
             pose = np.dot(camera_pose, pose)
         points = transform_points(points, pose)
