@@ -1,32 +1,10 @@
 import os
+import argparse
 import numpy as np
 import open3d as o3d
-from transforms3d.euler import euler2mat, quat2mat
+from transforms3d.euler import euler2mat
 from utils.xmlhandler import xmlReader
-from PIL import Image
-from multiprocessing import Process
-import scipy.io as scio
-from utils.rotation import viewpoint_params_to_matrix, viewpoint_to_matrix
-import csv
-
-
-DATASET_ROOT = r'G:\MyProject\data\Grasping'
-
-labeldir = r'G:\MyProject\data\Grasping\annotation_v4_10w\radius_1cm\poisson'
-# modeldir = r'G:\MyProject\data\Grasping\model_chenxi'
-modeldir = r'G:\MyProject\data\Grasping\models'
-scenedir = r'G:\MyProject\data\Grasping\scenes\scene_{}\{}'
-
-# LOG = open('log.txt')
-
-k = 0.05
-radius = 0.02
-wrench_thre = k * radius * np.pi
-
-# def log_string(out_str):
-#     LOG.write(out_str+'\n')
-#     LOG.flush()
-#     print(out_str)
+from utils.rotation import viewpoint_to_matrix
 
 
 def transform_points(points, trans):
@@ -143,41 +121,27 @@ def visu_score_gravity(scene_idx, anno_idx, camera, visu_num):
                                         return_poses=True, align=True, camera=camera)
     
     table = create_table_cloud(1.0, 0.01, 1.0, dx=-0.5, dy=-0.5, dz=0, grid_size=0.01)
-    # camera_poses = np.load(os.path.join('camera_poses', '{}_pose.npy'.format(camera)))
-    # camera_pose = camera_poses[anno_idx]
     camera_poses = np.load(os.path.join(DATASET_ROOT, 'scenes', scene_name, camera, 'camera_poses.npy'))
     camera_pose = camera_poses[anno_idx]
     
-    # print(camera_pose)
     table.points = o3d.utility.Vector3dVector(transform_points(np.asarray(table.points), camera_pose))
     
-    wrench_dump = np.load('wrench_score/{}_{}_wrench_scores.npz'.format(scene_idx, camera))
+    wrench_dump = np.load(os.path.join(wrenchdir, '{}_{}_wrench_scores.npz'.format(scene_idx, camera)))
     num_obj = len(obj_list)
-    
-    # new_z = np.array((0, 0, -1), dtype=np.float32)
-    # new_y = np.array((0, 1, 0), dtype=np.float32)
-    # # new_y = new_y / np.linalg.norm(new_y)
-    # # new_x = np.cross(new_y, new_z)
-    # new_x = np.array((1, 0, 0), dtype=np.float32)
-    # R_g = np.c_[new_x, np.c_[new_y, new_z]]
     
     for obj_i in range(len(obj_list)):
         print('Checking ' + str(obj_i+1) + ' / ' + str(num_obj))
         obj_idx = obj_list[obj_i]
         print('object id:', obj_idx)
         trans = pose_list[obj_i]
-        sampled_points, normals, _, _ = get_model_grasps('%s/%03d_labels.npz'%(labeldir, obj_idx))
+        sampled_points, normals, _, _ = get_model_grasps('%s/%03d_labels.npz'%(sealdir, obj_idx))
         sampled_points = transform_points(sampled_points, trans)
         center = np.mean(sampled_points, axis=0)
-        print('center:', center.shape)
         score = wrench_dump['arr_{}'.format(obj_i)]
 
-        print('sampled_points:', sampled_points.shape)
-        print('score:', score.shape)
         arrow = o3d.geometry.TriangleMesh.create_arrow(cylinder_radius=0.01, cone_radius=0.015, 
                                                             cylinder_height=0.2, cone_height=0.04)
         arrow_points = np.asarray(arrow.vertices)
-        # arrow_points = np.dot(arrow_points, R_g.T) + center[np.newaxis,:]
         arrow_points[:, 2] = -arrow_points[:, 2]
         arrow_points = arrow_points + center[np.newaxis,:]
         arrow.vertices = o3d.utility.Vector3dVector(arrow_points)
@@ -189,28 +153,36 @@ def visu_score_gravity(scene_idx, anno_idx, camera, visu_num):
         for point_ind in point_inds:
             target_point = sampled_points[point_ind]
             normal = normals[point_ind]
-            # score = scores[point_ind]
-            # if target_point[1] < ymin or target_point[1] > ymax:
-            #     continue
             
             R = viewpoint_to_matrix(normal)
-            # t = transform_points(target_point[np.newaxis,:], trans).squeeze()
             t = target_point
             R = np.dot(trans[:3,:3], R)
-            # if R[2,0] < 0.5:
-            #     continue
             sucker = plot_sucker(radius, height, R, t, score[point_ind])
             suckers.append(sucker)
-            # o3d.visualization.draw_geometries([table, *model_list, sucker], width=1536, height=864)
             
         o3d.visualization.draw_geometries([table, *model_list, *suckers, arrow], width=1536, height=864)
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset_root', default='', help='Directory of graspnet dataset')
+parser.add_argument('--seal_dir', default='', help='Directory of seal annotation label')
+parser.add_argument('--wrench_dir', default='', help='Directory of the wrench annotation results')
+parser.add_argument('--camera', default='kinect', help='camera to use [default: kinect]')
+parser.add_argument("--scene_idx", type=int, default=0, help='the index of scene to visualize [default: 0]')
+parser.add_argument("--visu_num", type=int, default=50, help='the number of suctions to visualize')
+args = parser.parse_args()
+
+
+DATASET_ROOT = args.dataset_root
+sealdir = args.seal_dir
+modeldir = os.path.join(DATASET_ROOT, 'models')
+wrenchdir = args.wrench_dir
+scene_idx = args.scene_idx
+anno_idx = 0 # this doesn't matter since we annotate in 3D so the global pose are the same for all views (anno_idxs)
+camera = args.camera
+visu_num = args.visu_num
+
+
 if __name__ == "__main__":
-    
-    scene_idx = 0
-    anno_idx = 0
-    camera = 'kinect'
-    visu_num = 50
     visu_score_gravity(scene_idx, anno_idx, camera, visu_num)
 
