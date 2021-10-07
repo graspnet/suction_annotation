@@ -285,11 +285,6 @@ camera = args.camera
 
 if __name__ == '__main__':
     
-    DATASET_ROOT = r'G:\MyProject\data\Grasping\graspnet'
-    scene_idx = 100
-    camera = 'kinect'
-    visu_num = 10
-
     if not args.visu_each:
         vis_collision_individual(scene_idx, anno_idx, camera, visu_num)
     else:
